@@ -1,419 +1,419 @@
+define([], ->
 ########################################################################################################################
-class Subfield
-  constructor: (code) ->
-    @_code = code
-    @_parentField = null
-    @_index = ''
+  class Subfield
+    constructor: (code) ->
+      @_code = code
+      @_parentField = null
+      @_index = ''
 
-  getCode: ->
-    return @_code
-
-
-  setCode: (code) ->
-    @_code = code
+    getCode: ->
+      return @_code
 
 
-  setParentField: (field) ->
-    @_parentField = field
+    setCode: (code) ->
+      @_code = code
 
 
-  getParentField: ->
-    return @_parentField
-
-  setIndex: (index) ->
-    @_index = index
-
-  getIndex: ->
-    return @_index
+    setParentField: (field) ->
+      @_parentField = field
 
 
-########################################################################################################################
-class DataSubfield extends Subfield
-  constructor: (code, data) ->
-    super(code)
-    @_data = data
+    getParentField: ->
+      return @_parentField
+
+    setIndex: (index) ->
+      @_index = index
+
+    getIndex: ->
+      return @_index
 
 
-  getData: ->
-    return @_data
+  ########################################################################################################################
+  class DataSubfield extends Subfield
+    constructor: (code, data) ->
+      super(code)
+      @_data = data
 
 
-  setData: (data) ->
-    @_data = data
+    getData: ->
+      return @_data
 
 
-  toString: ->
-    return "$#{@getCode()}#{@getData()}"
-
-  toDict: ->
-    return {
-    'id': @getCode(),
-    'd': @getData()
-    }
-
-  @fromDict: (dict) ->
-    id = dict['id']
-    if not id
-      throw new Error('Data subfield not have id' +  JSON.stringify(dict))
-
-    d = dict['d']
-    if not d
-      throw new Error('Data subfield not have id' + JSON.stringify(dict))
-
-    return new DataSubfield(id, d)
+    setData: (data) ->
+      @_data = data
 
 
+    toString: ->
+      return "$#{@getCode()}#{@getData()}"
 
-########################################################################################################################
-class ExtendedSubfield extends Subfield
-  constructor: (code) ->
-    super(code)
-    @_fields = []
+    toDict: ->
+      return {
+      'id': @getCode(),
+      'd': @getData()
+      }
 
-  addField: (field) ->
-    field.setParentSubfield(@)
-    @_fields.push(field)
+    @fromDict: (dict) ->
+      id = dict['id']
+      if not id
+        throw new Error('Data subfield not have id' + JSON.stringify(dict))
 
-  addFields: (fields) ->
-    for field in fields
-      @addField(field)
+      d = dict['d']
+      if not d
+        throw new Error('Data subfield not have id' + JSON.stringify(dict))
 
-  getFields: ->
-    index = 0
-    for field in @_fields
-      field.setIndex("#{@getIndex()}_f_#{field.getTag()}_#{index}")
-      index++
+      return new DataSubfield(id, d)
 
-    return @_fields
 
-  removeField: (rfield) ->
-    index = @_fields.indexOf(rfield)
-    if index > -1
-      @_fields.splice(index, 1)
-    else
+  ########################################################################################################################
+  class ExtendedSubfield extends Subfield
+    constructor: (code) ->
+      super(code)
+      @_fields = []
+
+    addField: (field) ->
+      field.setParentSubfield(@)
+      @_fields.push(field)
+
+    addFields: (fields) ->
+      for field in fields
+        @addField(field)
+
+    getFields: ->
+      index = 0
+      for field in @_fields
+        field.setIndex("#{@getIndex()}_f_#{field.getTag()}_#{index}")
+        index++
+
+      return @_fields
+
+    removeField: (rfield) ->
+      index = @_fields.indexOf(rfield)
+      if index > -1
+        @_fields.splice(index, 1)
+      else
+        for field in @getFields()
+          if field instanceof DataField
+            for subfield in field.getSubfields()
+              if subfield instanceof ExtendedSubfield
+                subfield.removeField(rfield)
+
+    toString: ->
+      parts = ["$#{@getCode()} \n\t   "]
+      fields = @getFields()
+      i = 0
+      for field in fields
+        parts.push(field.toString())
+        if i < fields.length - 1
+          parts.push('\n\t   ')
+
+      return parts.join('')
+
+    toDict: ->
+      cfields = []
+      dfields = []
       for field in @getFields()
         if field instanceof DataField
-          for subfield in field.getSubfields()
-            if subfield instanceof ExtendedSubfield
-              subfield.removeField(rfield)
+          dfields.push(field.toDict())
+        else
+          cfields.push(field.toDict())
+      return {
+      'id': @getCode(),
+      'cf': cfields,
+      'df': dfields
+      }
 
-  toString: ->
-    parts = ["$#{@getCode()} \n\t   "]
-    fields = @getFields()
-    i = 0
-    for field in fields
-      parts.push(field.toString())
-      if i < fields.length - 1
-        parts.push('\n\t   ')
+    @fromDict: (dict) ->
+      id = dict['id']
+      if not id
+        throw new Error('Extended subfield not have id' + JSON.stringify(dict))
 
-    return parts.join('')
+      esf = new ExtendedSubfield(id)
 
-  toDict: ->
-    cfields = []
-    dfields = []
-    for field in @getFields()
-      if field instanceof DataField
-        dfields.push(field.toDict())
-      else
-        cfields.push(field.toDict())
-    return {
-    'id': @getCode(),
-    'cf': cfields,
-    'df': dfields
-    }
+      cfs = dict['cf']
+      if not cfs
+        throw new Error('Extended subfield not have cf' + JSON.stringify(dict))
 
-  @fromDict: (dict) ->
-    id = dict['id']
-    if not id
-      throw new Error('Extended subfield not have id' + JSON.stringify(dict))
-
-    esf = new ExtendedSubfield(id)
-
-    cfs = dict['cf']
-    if not cfs
-      throw new Error('Extended subfield not have cf' + JSON.stringify(dict))
-
-    for cf in dict['cf']
-      esf.addField(ControlField.fromDict(cf))
+      for cf in dict['cf']
+        esf.addField(ControlField.fromDict(cf))
 
 
-    dfs = dict['df']
-    if not dfs
-      throw new Error('Extended subfield not have df' + JSON.stringify(dict))
+      dfs = dict['df']
+      if not dfs
+        throw new Error('Extended subfield not have df' + JSON.stringify(dict))
 
-    for df in dfs
-      esf.addField(DataField.fromDict(df))
+      for df in dfs
+        esf.addField(DataField.fromDict(df))
 
-    return esf
+      return esf
 
-########################################################################################################################
-class Field
-  constructor: (tag) ->
-    @_tag = tag
-    @_parentSubfield = null
-    @_index = ''
+  ########################################################################################################################
+  class Field
+    constructor: (tag) ->
+      @_tag = tag
+      @_parentSubfield = null
+      @_index = ''
 
-  getTag: ->
-    return @_tag
-
-
-  setParentSubfield: (subfield) ->
-    @_parentSubfield = subfield
-
-  getParentSubfield: ->
-    return @_parentSubfield
-
-  setIndex: (index) ->
-    @_index = index
-
-  getIndex: ->
-    return @_index
-
-########################################################################################################################
-class ControlField extends Field
-  constructor: (tag, data) ->
-    super(tag)
-    @_data = data
-
-  getData: ->
-    return @_data
-
-  toString: ->
-    return "#{@getTag()} #{@getData()}"
-
-  toDict: ->
-    return {'tag': @getTag(), 'd': @getData()}
-
-  @fromDict: (dict) ->
-    tag = dict['tag']
-    if not tag
-      throw new Error('Control field not have tag ' + JSON.stringify(dict))
-
-    d = dict['d']
-    if not d
-      throw new Error('Control field not have d ' + JSON.stringify(dict))
-
-    return new ControlField(tag, d)
-
-########################################################################################################################
-class DataField extends Field
-  constructor: (tag, ind1, ind2) ->
-    super(tag)
-    @_ind1 = ind1
-    @_ind2 = ind2
-    @_subfields = []
+    getTag: ->
+      return @_tag
 
 
-  addSubfield: (subfield) ->
-    subfield.setParentField(@)
-    @_subfields.push(subfield)
+    setParentSubfield: (subfield) ->
+      @_parentSubfield = subfield
+
+    getParentSubfield: ->
+      return @_parentSubfield
+
+    setIndex: (index) ->
+      @_index = index
+
+    getIndex: ->
+      return @_index
+
+  ########################################################################################################################
+  class ControlField extends Field
+    constructor: (tag, data) ->
+      super(tag)
+      @_data = data
+
+    getData: ->
+      return @_data
+
+    toString: ->
+      return "#{@getTag()} #{@getData()}"
+
+    toDict: ->
+      return {'tag': @getTag(), 'd': @getData()}
+
+    @fromDict: (dict) ->
+      tag = dict['tag']
+      if not tag
+        throw new Error('Control field not have tag ' + JSON.stringify(dict))
+
+      d = dict['d']
+      if not d
+        throw new Error('Control field not have d ' + JSON.stringify(dict))
+
+      return new ControlField(tag, d)
+
+  ########################################################################################################################
+  class DataField extends Field
+    constructor: (tag, ind1, ind2) ->
+      super(tag)
+      @_ind1 = ind1
+      @_ind2 = ind2
+      @_subfields = []
 
 
-  addSubfiels: (subfields) ->
-    for subfield in subfields
+    addSubfield: (subfield) ->
       subfield.setParentField(@)
       @_subfields.push(subfield)
 
 
-  getSubfields: ->
-    index = 0
-    for subfield in @_subfields
-      subfield.setIndex("#{@getIndex()}_sf_#{subfield.getCode()}_#{index}")
-      index++
-
-    return @_subfields
+    addSubfiels: (subfields) ->
+      for subfield in subfields
+        subfield.setParentField(@)
+        @_subfields.push(subfield)
 
 
-  setSubfields: (subfields) ->
-    @_subfields = []
-    @addSubfiels(subfields)
+    getSubfields: ->
+      index = 0
+      for subfield in @_subfields
+        subfield.setIndex("#{@getIndex()}_sf_#{subfield.getCode()}_#{index}")
+        index++
 
-  removeSubfield: (rsubfield) ->
-    index = @_subfields.indexOf(rsubfield)
-    if index > -1
-      @_subfields.splice(index, 1)
-    else
+      return @_subfields
+
+
+    setSubfields: (subfields) ->
+      @_subfields = []
+      @addSubfiels(subfields)
+
+    removeSubfield: (rsubfield) ->
+      index = @_subfields.indexOf(rsubfield)
+      if index > -1
+        @_subfields.splice(index, 1)
+      else
+        for subfield in @getSubfields()
+          if subfield instanceof ExtendedSubfield
+            subfield.removeSubfield(rsubfield)
+
+    getIndicator1: ->
+      return @_ind1
+
+
+    getIndicator2: ->
+      return @_ind2
+
+
+    toString: ->
+      lines = [@getTag()]
+      lines.push(' ')
+      lines.push(@getIndicator1().replace(' ', '#'))
+      lines.push(@getIndicator2().replace(' ', '#'))
+
       for subfield in @getSubfields()
-        if subfield instanceof ExtendedSubfield
-          subfield.removeSubfield(rsubfield)
+        if subfield instanceof DataSubfield
+          lines.push(' ')
+          lines.push(subfield.toString())
+        else
+          lines.push('\n\t')
+          lines.push(subfield.toString())
 
-  getIndicator1: ->
-    return @_ind1
+      return lines.join('')
+
+    toDict: ->
+      dsubfields = []
+      exsubfields = []
+
+      for subfield in @getSubfields()
+        if subfield instanceof DataSubfield
+          dsubfields.push(subfield.toDict())
+        else
+          exsubfields.push(subfield.toDict())
+      return {
+      'tag': @getTag(),
+      'i1': @getIndicator1(),
+      'i2': @getIndicator2(),
+      'sf': dsubfields,
+      'esf': exsubfields
+      }
+
+    @fromDict: (dict) ->
+      tag = dict['tag']
+      if not tag
+        throw new Error('Data field not have tag' + JSON.stringify(dict))
+
+      i1 = dict['i1']
+      if not i1
+        throw new Error('Data field not have i1' + JSON.stringify(dict))
+
+      i2 = dict['i2']
+      if not i2
+        throw new Error('Data field not have i2' + JSON.stringify(dict))
+
+      df = new DataField(tag, i1, i2)
+
+      sfs = dict['sf']
+      if not sfs
+        throw new Error('Data field not have sfs' + JSON.stringify(dict))
+
+      for sf in sfs
+        df.addSubfield(DataSubfield.fromDict(sf))
+
+      esfs = dict['esf']
+      if not esfs
+        throw new Error('Data field not have esf ' + JSON.stringify(dict))
+
+      for esf in esfs
+        df.addSubfield(ExtendedSubfield.fromDict(esf))
+
+      return df
 
 
-  getIndicator2: ->
-    return @_ind2
+  ########################################################################################################################
+  class Leader
+    constructor: (data = '00000       00000       ') ->
+      @_data = data
+
+    getData: ->
+      return @_data
+
+    setData: (data) ->
+      @_data = data
 
 
-  toString: ->
-    lines = [@getTag()]
-    lines.push(' ')
-    lines.push(@getIndicator1().replace(' ', '#'))
-    lines.push(@getIndicator2().replace(' ', '#'))
+  ########################################################################################################################
+  class Record
+    constructor: ->
+      @_leader = new Leader()
+      @_fields = []
 
-    for subfield in @getSubfields()
-      if subfield instanceof DataSubfield
-        lines.push(' ')
-        lines.push(subfield.toString())
+
+    addField: (field) ->
+      @_fields.push(field)
+
+    addFields: (fields) ->
+      for field in fields
+        @addField(field)
+
+    getFields: ->
+      index = 0
+      for field in @_fields
+        field.setIndex("f_#{field.getTag()}_#{index}")
+        index++
+      return @_fields
+
+    removeField: (rfield) ->
+      index = @_fields.indexOf(rfield)
+      if index > -1
+        @_fields.splice(index, 1)
+
       else
-        lines.push('\n\t')
-        lines.push(subfield.toString())
+        for field in @getFields()
+          if field instanceof DataField
+            for subfield in field.getSubfields()
+              if subfield instanceof ExtendedSubfield
+                subfield.removeField(rfield)
 
-    return lines.join('')
+    getLeader: ->
+      return @_leader
 
-  toDict: ->
-    dsubfields = []
-    exsubfields = []
-
-    for subfield in @getSubfields()
-      if subfield instanceof DataSubfield
-        dsubfields.push(subfield.toDict())
-      else
-        exsubfields.push(subfield.toDict())
-    return {
-    'tag': @getTag(),
-    'i1': @getIndicator1(),
-    'i2': @getIndicator2(),
-    'sf': dsubfields,
-    'esf': exsubfields
-    }
-
-  @fromDict: (dict) ->
-    tag = dict['tag']
-    if not tag
-      throw new Error('Data field not have tag' + JSON.stringify(dict))
-
-    i1 = dict['i1']
-    if not i1
-      throw new Error('Data field not have i1' + JSON.stringify(dict))
-
-    i2 = dict['i2']
-    if not i2
-      throw new Error('Data field not have i2' + JSON.stringify(dict))
-
-    df = new DataField(tag, i1, i2)
-
-    sfs = dict['sf']
-    if not sfs
-      throw new Error('Data field not have sfs' + JSON.stringify(dict))
-
-    for sf in sfs
-      df.addSubfield(DataSubfield.fromDict(sf))
-
-    esfs = dict['esf']
-    if not esfs
-      throw new Error('Data field not have esf ' + JSON.stringify(dict))
-
-    for esf in esfs
-      df.addSubfield(ExtendedSubfield.fromDict(esf))
-
-    return df
+    setLeader: (leader) ->
+      @_leader = leader
 
 
+    toString: ->
+      parts = ["ldr: #{@getLeader().getData()}"]
+      for field in @getFields()
+        parts.push(field.toString())
 
-########################################################################################################################
-class Leader
-  constructor: (data='00000       00000       ') ->
-    @_data = data
+      return parts.join('\n')
 
-  getData: ->
-    return @_data
-
-  setData: (data) ->
-    @_data = data
-
-
-########################################################################################################################
-class Record
-  constructor: ->
-    @_leader = new Leader()
-    @_fields = []
-
-
-  addField: (field) ->
-    @_fields.push(field)
-
-  addFields: (fields) ->
-    for field in fields
-      @addField(field)
-
-  getFields: ->
-    index = 0
-    for field in @_fields
-      field.setIndex("f_#{field.getTag()}_#{index}")
-      index++
-    return @_fields
-
-  removeField: (rfield) ->
-    index = @_fields.indexOf(rfield)
-    if index > -1
-      @_fields.splice(index, 1)
-
-    else
+    toDict: ->
+      cfields = []
+      dfields = []
       for field in @getFields()
         if field instanceof DataField
-          for subfield in field.getSubfields()
-            if subfield instanceof ExtendedSubfield
-              subfield.removeField(rfield)
+          dfields.push(field.toDict())
+        else
+          cfields.push(field.toDict())
+      return {
+      'l': @getLeader().getData(),
+      'cf': cfields,
+      'df': dfields
+      }
 
-  getLeader: ->
-    return @_leader
+    @fromDict: (dict) ->
+      record = new Record()
+      leader = dict['l']
+      if not leader
+        throw new Error('Record not have leader')
 
-  setLeader: (leader) ->
-    @_leader = leader
+      record.setLeader(new Leader(leader))
 
+      cfs = dict['cf']
+      if not cfs
+        throw new Error('Record not have cf')
 
-  toString: ->
-    parts = ["ldr: #{@getLeader().getData()}"]
-    for field in @getFields()
-      parts.push(field.toString())
+      for cf in cfs
+        record.addField(ControlField.fromDict(cf))
 
-    return parts.join('\n')
+      dfs = dict['df']
+      for df in dfs
+        record.addField(DataField.fromDict(df))
 
-  toDict: ->
-    cfields = []
-    dfields = []
-    for field in @getFields()
-      if field instanceof DataField
-        dfields.push(field.toDict())
-      else
-        cfields.push(field.toDict())
-    return {
-    'l': @getLeader().getData(),
-    'cf': cfields,
-    'df': dfields
-    }
+      return record
 
-  @fromDict: (dict) ->
-    record = new Record()
-    leader = dict['l']
-    if not leader
-      throw new Error('Record not have leader')
+  junimarc = {
+    Leader: Leader,
+    Subfield: Subfield,
+    DataSubfield: DataSubfield,
+    ExtendedSubfield: ExtendedSubfield,
+    Field: Field,
+    ControlField: ControlField,
+    DataField: DataField,
+    Record: Record
+  }
 
-    record.setLeader(new Leader(leader))
-
-    cfs = dict['cf']
-    if not cfs
-      throw new Error('Record not have cf')
-
-    for cf in cfs
-      record.addField(ControlField.fromDict(cf))
-
-    dfs = dict['df']
-    for df in dfs
-      record.addField(DataField.fromDict(df))
-
-    return record
-
-junimarc = {
-  Leader: Leader,
-  Subfield: Subfield,
-  DataSubfield: DataSubfield,
-  ExtendedSubfield: ExtendedSubfield,
-  Field: Field,
-  ControlField: ControlField,
-  DataField: DataField,
-  Record: Record
-}
-
-return junimarc;
+  return junimarc
+)
