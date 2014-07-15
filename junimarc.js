@@ -193,21 +193,19 @@
         }
         esf = new ExtendedSubfield(id);
         cfs = dict['cf'];
-        if (!cfs) {
-          throw new Error('Extended subfield not have cf' + JSON.stringify(dict));
-        }
-        _ref = dict['cf'];
-        for (_i = 0, _len = _ref.length; _i < _len; _i++) {
-          cf = _ref[_i];
-          esf.addField(ControlField.fromDict(cf));
+        if (cfs) {
+          _ref = dict['cf'];
+          for (_i = 0, _len = _ref.length; _i < _len; _i++) {
+            cf = _ref[_i];
+            esf.addField(ControlField.fromDict(cf));
+          }
         }
         dfs = dict['df'];
-        if (!dfs) {
-          throw new Error('Extended subfield not have df' + JSON.stringify(dict));
-        }
-        for (_j = 0, _len1 = dfs.length; _j < _len1; _j++) {
-          df = dfs[_j];
-          esf.addField(DataField.fromDict(df));
+        if (dfs) {
+          for (_j = 0, _len1 = dfs.length; _j < _len1; _j++) {
+            df = dfs[_j];
+            esf.addField(DataField.fromDict(df));
+          }
         }
         return esf;
       };
@@ -413,20 +411,18 @@
         }
         df = new DataField(tag, i1, i2);
         sfs = dict['sf'];
-        if (!sfs) {
-          throw new Error('Data field not have sfs' + JSON.stringify(dict));
-        }
-        for (_i = 0, _len = sfs.length; _i < _len; _i++) {
-          sf = sfs[_i];
-          df.addSubfield(DataSubfield.fromDict(sf));
+        if (sfs) {
+          for (_i = 0, _len = sfs.length; _i < _len; _i++) {
+            sf = sfs[_i];
+            df.addSubfield(DataSubfield.fromDict(sf));
+          }
         }
         esfs = dict['esf'];
-        if (!esfs) {
-          throw new Error('Data field not have esf ' + JSON.stringify(dict));
-        }
-        for (_j = 0, _len1 = esfs.length; _j < _len1; _j++) {
-          esf = esfs[_j];
-          df.addSubfield(ExtendedSubfield.fromDict(esf));
+        if (esfs) {
+          for (_j = 0, _len1 = esfs.length; _j < _len1; _j++) {
+            esf = esfs[_j];
+            df.addSubfield(ExtendedSubfield.fromDict(esf));
+          }
         }
         return df;
       };

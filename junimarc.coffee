@@ -130,19 +130,15 @@ define([], ->
       esf = new ExtendedSubfield(id)
 
       cfs = dict['cf']
-      if not cfs
-        throw new Error('Extended subfield not have cf' + JSON.stringify(dict))
-
-      for cf in dict['cf']
-        esf.addField(ControlField.fromDict(cf))
+      if cfs
+        for cf in dict['cf']
+          esf.addField(ControlField.fromDict(cf))
 
 
       dfs = dict['df']
-      if not dfs
-        throw new Error('Extended subfield not have df' + JSON.stringify(dict))
-
-      for df in dfs
-        esf.addField(DataField.fromDict(df))
+      if dfs
+        for df in dfs
+          esf.addField(DataField.fromDict(df))
 
       return esf
 
@@ -294,18 +290,14 @@ define([], ->
       df = new DataField(tag, i1, i2)
 
       sfs = dict['sf']
-      if not sfs
-        throw new Error('Data field not have sfs' + JSON.stringify(dict))
-
-      for sf in sfs
-        df.addSubfield(DataSubfield.fromDict(sf))
+      if sfs
+        for sf in sfs
+          df.addSubfield(DataSubfield.fromDict(sf))
 
       esfs = dict['esf']
-      if not esfs
-        throw new Error('Data field not have esf ' + JSON.stringify(dict))
-
-      for esf in esfs
-        df.addSubfield(ExtendedSubfield.fromDict(esf))
+      if esfs
+        for esf in esfs
+          df.addSubfield(ExtendedSubfield.fromDict(esf))
 
       return df
 
